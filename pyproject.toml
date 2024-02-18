@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "fiat_ecc"
+version = "0.1.0"
+description = ""
+authors = ["vitalnodo <vitalnodo@outlook.com>"]
+readme = "README.md"
+packages = [{include = "fiat_ecc"}]
+include = [ { path = "src/", format = "sdist" },
+ { path = "fiat_ecc/*.so", format = "wheel" } ]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+ziggy-pydust = "0.23.1"
+pytest = "^7.4.0"
+black = "^23.7.0"
+
+[tool.poetry.build]
+script = "build.py"
+
+[build-system]
+requires = ["poetry-core", "ziggy-pydust==0.23.1"]
+build-backend = "poetry.core.masonry.api"
+
+[[tool.pydust.ext_module]]
+name = "fiat_ecc.secp256k1"
+root = "src/secp256k1.zig"
