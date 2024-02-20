@@ -1,4 +1,4 @@
-# fiat_ecc
+# some_ecc
 
 To build:
 ```bash

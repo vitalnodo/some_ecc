@@ -1,12 +1,12 @@
 [tool.poetry]
-name = "fiat_ecc"
+name = "some_ecc"
 version = "0.1.0"
 description = ""
 authors = ["vitalnodo <vitalnodo@outlook.com>"]
 readme = "README.md"
-packages = [{include = "fiat_ecc"}]
+packages = [{include = "some_ecc"}]
 include = [ { path = "src/", format = "sdist" },
- { path = "fiat_ecc/*.so", format = "wheel" } ]
+ { path = "some_ecc/*.so", format = "wheel" } ]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -24,5 +24,5 @@ requires = ["poetry-core", "ziggy-pydust==0.23.1"]
 build-backend = "poetry.core.masonry.api"
 
 [[tool.pydust.ext_module]]
-name = "fiat_ecc.secp256k1"
+name = "some_ecc.secp256k1"
 root = "src/secp256k1.zig"
