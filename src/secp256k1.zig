@@ -342,6 +342,193 @@ pub const Scalar = py.class(struct {
     }
 });
 
+pub const Point = py.class(struct {
+    const Self = @This();
+    actual: curve,
+
+    pub fn __init__(self: *@This()) void {
+        self.actual = curve.random();
+    }
+
+    pub fn random() !*Self {
+        return py.init(Self, .{ .actual = curve.random() });
+    }
+
+    pub fn __add__(self: *const Self, other: *const Self) !*Self {
+        return py.init(Self, .{
+            .actual = self.actual.add(other.actual),
+        });
+    }
+
+    // addMixed
+
+    // affineCoordinates
+
+    pub fn dbl(self: *const Self) !*Self {
+        return py.init(Self, .{ .actual = self.actual.dbl() });
+    }
+
+    pub fn __eq__(self: *const Self, other: *const Self) !py.PyBool {
+        return py.PyBool.create(self.actual.equivalent(other.actual));
+    }
+
+    // fromAffineCoordinates
+
+    pub fn from_Sec1(args: struct { s: py.PyBytes }) !*Self {
+        const res = curve.fromSec1(try args.s.asSlice()) catch |err| switch (err) {
+            error.InvalidEncoding => {
+                return py.ValueError.raise(utils.ERROR_ENCODING);
+            },
+            error.NotSquare => {
+                return py.ArithmeticError.raise(utils.ERROR_NOT_SQUARE);
+            },
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+        return py.init(Self, .{ .actual = res });
+    }
+
+    pub fn from_serialized_affine_coordinates(args: struct {
+        xs_: py.PyBytes,
+        ys_: py.PyBytes,
+        _endian: py.PyString,
+    }) !*Self {
+        if (try args.xs_.length() != 32 or try args.ys_.length() != 32) {
+            return py.ValueError.raiseComptimeFmt(
+                utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
+                .{32},
+            );
+        }
+        const xs_slice = (try args.xs_.asSlice())[0..32].*;
+        const ys_slice = (try args.ys_.asSlice())[0..32].*;
+        const endian = try utils.give_endian_or_reject(args._endian);
+        const res = curve.fromSerializedAffineCoordinates(
+            xs_slice,
+            ys_slice,
+            endian,
+        ) catch |err| switch (err) {
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+            error.InvalidEncoding => {
+                return py.ValueError.raise(utils.ERROR_ENCODING);
+            },
+        };
+        return py.init(Self, .{
+            .actual = res,
+        });
+    }
+
+    pub fn mul(
+        self: *const Self,
+        args: struct { s: py.PyBytes, _endian: py.PyString },
+    ) !*Self {
+        if (try args.s.length() != 32) {
+            return py.ValueError.raiseComptimeFmt(
+                utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
+                .{32},
+            );
+        }
+        const s_slice = (try args.s.asSlice())[0..32].*;
+        const endian = try utils.give_endian_or_reject(args._endian);
+        const res = self.actual.mul(
+            s_slice,
+            endian,
+        ) catch |err| switch (err) {
+            error.IdentityElement => {
+                return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+            },
+        };
+        return py.init(Self, .{ .actual = res });
+    }
+
+    pub fn mulDoubleBasePublic(p1: *const Self, args: struct {
+        p2: *const Self,
+        s1_: py.PyBytes,
+        s2_: py.PyBytes,
+        _endian: py.PyString,
+    }) !*Self {
+        if (try args.s1_.length() != 32 or try args.s2_.length() != 32) {
+            return py.ValueError.raiseComptimeFmt(
+                utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
+                .{32},
+            );
+        }
+        const s1_slice = (try args.s1_.asSlice())[0..32].*;
+        const s2_slice = (try args.s2_.asSlice())[0..32].*;
+        const endian = try utils.give_endian_or_reject(args._endian);
+        const res = curve.mulDoubleBasePublic(
+            p1.actual,
+            s1_slice,
+            args.p2.actual,
+            s2_slice,
+            endian,
+        ) catch |err| switch (err) {
+            error.IdentityElement => {
+                return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+            },
+        };
+        return py.init(Self, .{ .actual = res });
+    }
+
+    pub fn mulPublic(
+        self: *const Self,
+        args: struct { s: py.PyBytes, _endian: py.PyString },
+    ) !*Self {
+        if (try args.s.length() != 32) {
+            return py.ValueError.raiseComptimeFmt(
+                utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
+                .{32},
+            );
+        }
+        const s_slice = (try args.s.asSlice())[0..32].*;
+        const endian = try utils.give_endian_or_reject(args._endian);
+        const res = self.actual.mulPublic(
+            s_slice,
+            endian,
+        ) catch |err| switch (err) {
+            error.IdentityElement => {
+                return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+            },
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+        return py.init(Self, .{ .actual = res });
+    }
+
+    pub fn __neg__(self: *const Self) !*Self {
+        return py.init(Self, .{ .actual = self.actual.neg() });
+    }
+
+    // recoverY
+
+    pub fn reject_identity(self: *const Self) !void {
+        _ = self.actual.rejectIdentity() catch |err| switch (err) {
+            error.IdentityElement => {
+                return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+            },
+        };
+    }
+
+    pub fn __sub__(self: *const Self, other: *const Self) !*Self {
+        return py.init(Self, .{
+            .actual = self.actual.sub(other.actual),
+        });
+    }
+
+    // subMixed
+
+    pub fn to_compressedSec1(self: *const Self) !py.PyBytes {
+        return py.PyBytes.create(&self.actual.toCompressedSec1());
+    }
+
+    pub fn to_uncompressedSec1(self: *const Self) !py.PyBytes {
+        return py.PyBytes.create(&self.actual.toUncompressedSec1());
+    }
+});
+
 pub const BasePoint = py.class(struct {
     pub const actual = curve.basePoint;
 
