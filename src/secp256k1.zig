@@ -360,7 +360,52 @@ pub const Point = py.class(struct {
         });
     }
 
-    // addMixed
+    pub fn add_mixed(self: *const Self, args: struct { xy: py.PyTuple }) !*Self {
+        const x = try args.xy.getItem(py.PyLong, 0);
+        const y = try args.xy.getItem(py.PyLong, 1);
+        const x_bytes: py.PyBytes = try x.obj.call(
+            py.PyBytes,
+            "to_bytes",
+            .{32},
+            .{},
+        );
+        const x_slice = (try x_bytes.asSlice())[0..32].*;
+        const x_Fe = curve.Fe.fromBytes(
+            x_slice,
+            .Big,
+        ) catch |err| switch (err) {
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+        const y_bytes: py.PyBytes = try y.obj.call(
+            py.PyBytes,
+            "to_bytes",
+            .{32},
+            .{},
+        );
+        const y_slice = (try y_bytes.asSlice())[0..32].*;
+        const y_Fe = curve.Fe.fromBytes(
+            y_slice,
+            .Big,
+        ) catch |err| switch (err) {
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+        // BUG?
+        // const res = self.actual.addMixed(.{ .x = x_Fe, .y = y_Fe });
+        const second = curve.fromAffineCoordinates(
+            .{ .x = x_Fe, .y = y_Fe },
+        ) catch |err| switch (err) {
+            error.InvalidEncoding => {
+                return py.ValueError.raise(utils.ERROR_ENCODING);
+            },
+        };
+        const res = self.actual.add(second);
+
+        return py.init(Self, .{ .actual = res });
+    }
 
     pub fn affine_coordinates(self: *const Self) !py.PyTuple {
         const x_bytes: py.PyBytes = try py.PyBytes.create(
@@ -393,7 +438,48 @@ pub const Point = py.class(struct {
         return py.PyBool.create(self.actual.equivalent(other.actual));
     }
 
-    // fromAffineCoordinates
+    pub fn from_affine_coordinates(args: struct { xy: py.PyTuple }) !*Self {
+        const x = try args.xy.getItem(py.PyLong, 0);
+        const y = try args.xy.getItem(py.PyLong, 1);
+        const x_bytes: py.PyBytes = try x.obj.call(
+            py.PyBytes,
+            "to_bytes",
+            .{32},
+            .{},
+        );
+        const x_slice = (try x_bytes.asSlice())[0..32].*;
+        const x_Fe = curve.Fe.fromBytes(
+            x_slice,
+            .Big,
+        ) catch |err| switch (err) {
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+        const y_bytes: py.PyBytes = try y.obj.call(
+            py.PyBytes,
+            "to_bytes",
+            .{32},
+            .{},
+        );
+        const y_slice = (try y_bytes.asSlice())[0..32].*;
+        const y_Fe = curve.Fe.fromBytes(
+            y_slice,
+            .Big,
+        ) catch |err| switch (err) {
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+        const res = curve.fromAffineCoordinates(
+            .{ .x = x_Fe, .y = y_Fe },
+        ) catch |err| switch (err) {
+            error.InvalidEncoding => {
+                return py.ValueError.raise(utils.ERROR_ENCODING);
+            },
+        };
+        return py.init(Self, .{ .actual = res });
+    }
 
     pub fn from_Sec1(args: struct { s: py.PyBytes }) !*Self {
         const res = curve.fromSec1(try args.s.asSlice()) catch |err| switch (err) {
@@ -523,7 +609,31 @@ pub const Point = py.class(struct {
         return py.init(Self, .{ .actual = self.actual.neg() });
     }
 
-    // recoverY
+    // currently one cannot return u256 number as PyLong to python
+    pub fn recover_Y(args: struct { x: py.PyLong, is_odd: py.PyBool }) !py.PyBytes {
+        const x_bytes: py.PyBytes = try args.x.obj.call(
+            py.PyBytes,
+            "to_bytes",
+            .{32},
+            .{},
+        );
+        const x_slice = (try x_bytes.asSlice())[0..32].*;
+        const x_Fe = curve.Fe.fromBytes(
+            x_slice,
+            .Big,
+        ) catch |err| switch (err) {
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+        const y = curve.recoverY(x_Fe, args.is_odd.asbool()) catch |err| switch (err) {
+            error.NotSquare => {
+                return py.ArithmeticError.raise(utils.ERROR_NOT_SQUARE);
+            },
+        };
+        const y_bytes = y.toBytes(.Big);
+        return try py.PyBytes.create(&y_bytes);
+    }
 
     pub fn reject_identity(self: *const Self) !void {
         _ = self.actual.rejectIdentity() catch |err| switch (err) {
@@ -539,7 +649,50 @@ pub const Point = py.class(struct {
         });
     }
 
-    // subMixed
+    pub fn sub_mixed(self: *const Self, args: struct { xy: py.PyTuple }) !*Self {
+        const x = try args.xy.getItem(py.PyLong, 0);
+        const y = try args.xy.getItem(py.PyLong, 1);
+        const x_bytes: py.PyBytes = try x.obj.call(
+            py.PyBytes,
+            "to_bytes",
+            .{32},
+            .{},
+        );
+        const x_slice = (try x_bytes.asSlice())[0..32].*;
+        const x_Fe = curve.Fe.fromBytes(
+            x_slice,
+            .Big,
+        ) catch |err| switch (err) {
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+        const y_bytes: py.PyBytes = try y.obj.call(
+            py.PyBytes,
+            "to_bytes",
+            .{32},
+            .{},
+        );
+        const y_slice = (try y_bytes.asSlice())[0..32].*;
+        const y_Fe = curve.Fe.fromBytes(
+            y_slice,
+            .Big,
+        ) catch |err| switch (err) {
+            error.NonCanonical => {
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+        const second = curve.fromAffineCoordinates(
+            .{ .x = x_Fe, .y = y_Fe },
+        ) catch |err| switch (err) {
+            error.InvalidEncoding => {
+                return py.ValueError.raise(utils.ERROR_ENCODING);
+            },
+        };
+        const res = self.actual.sub(second);
+
+        return py.init(Self, .{ .actual = res });
+    }
 
     pub fn to_compressedSec1(self: *const Self) !py.PyBytes {
         return py.PyBytes.create(&self.actual.toCompressedSec1());
