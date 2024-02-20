@@ -362,7 +362,28 @@ pub const Point = py.class(struct {
 
     // addMixed
 
-    // affineCoordinates
+    pub fn affine_coordinates(self: *const Self) !py.PyTuple {
+        const x_bytes: py.PyBytes = try py.PyBytes.create(
+            &self.actual.x.toBytes(.Big),
+        );
+        const y_bytes: py.PyBytes = try py.PyBytes.create(
+            &self.actual.y.toBytes(.Big),
+        );
+        const int: py.PyLong = try py.PyLong.create(0);
+        const x = try int.obj.call(
+            py.PyLong,
+            "from_bytes",
+            .{x_bytes},
+            .{},
+        );
+        const y = try int.obj.call(
+            py.PyLong,
+            "from_bytes",
+            .{y_bytes},
+            .{},
+        );
+        return try py.PyTuple.create(.{ x, y });
+    }
 
     pub fn dbl(self: *const Self) !*Self {
         return py.init(Self, .{ .actual = self.actual.dbl() });
@@ -443,7 +464,7 @@ pub const Point = py.class(struct {
         return py.init(Self, .{ .actual = res });
     }
 
-    pub fn mulDoubleBasePublic(p1: *const Self, args: struct {
+    pub fn mul_double_base_public(p1: *const Self, args: struct {
         p2: *const Self,
         s1_: py.PyBytes,
         s2_: py.PyBytes,
@@ -472,7 +493,7 @@ pub const Point = py.class(struct {
         return py.init(Self, .{ .actual = res });
     }
 
-    pub fn mulPublic(
+    pub fn mul_public(
         self: *const Self,
         args: struct { s: py.PyBytes, _endian: py.PyString },
     ) !*Self {
@@ -530,29 +551,13 @@ pub const Point = py.class(struct {
 });
 
 pub const BasePoint = py.class(struct {
-    pub const actual = curve.basePoint;
+    const Self = @This();
+    point: Point,
 
-    pub fn affine_coordinates() !py.PyTuple {
-        const x_bytes: py.PyBytes = try py.PyBytes.create(
-            &actual.x.toBytes(.Big),
-        );
-        const y_bytes: py.PyBytes = try py.PyBytes.create(
-            &actual.y.toBytes(.Big),
-        );
-        const int: py.PyLong = try py.PyLong.create(0);
-        const x = try int.obj.call(
-            py.PyLong,
-            "from_bytes",
-            .{x_bytes},
-            .{},
-        );
-        const y = try int.obj.call(
-            py.PyLong,
-            "from_bytes",
-            .{y_bytes},
-            .{},
-        );
-        return try py.PyTuple.create(.{ x, y });
+    pub fn __init__(self: *Self) !void {
+        self.* = .{
+            .point = .{ .actual = curve.basePoint },
+        };
     }
 });
 
