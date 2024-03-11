@@ -1,4 +1,4 @@
-from fiat_ecc import secp256k1
+from some_ecc import secp256k1
 
 
 def test_secp256k1_basepoint_affine_coordinates():
