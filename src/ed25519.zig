@@ -270,6 +270,199 @@ pub const Scalar = py.class(struct {
     }
 });
 
+pub const Point = py.class(struct {
+    const Self = @This();
+    actual: curve,
+
+    pub fn __add__(self: *const Self, other: *const Self) !*Self {
+        return py.init(Self, .{
+            .actual = self.actual.add(other.actual),
+        });
+    }
+
+    pub fn clamped_mul(self: *const Self, args: struct {
+        _bytes: py.PyBytes,
+    }) !*Self {
+        const scalar = (try args._bytes.asSlice())[0..32].*;
+        const res = self.actual.clampedMul(
+            scalar,
+        ) catch |err| switch (err) {
+            error.IdentityElement => {
+                return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+            },
+            error.WeakPublicKey => {
+                return py.ArithmeticError.raise(utils.ERROR_WEAKPUBLICKEY);
+            },
+        };
+        return py.init(Self, .{
+            .actual = res,
+        });
+    }
+
+    pub fn clear_cofactor(self: *const Self) !*Self {
+        return py.init(Self, .{
+            .actual = self.actual.clearCofactor(),
+        });
+    }
+
+    pub fn dbl(self: *const Self) !*Self {
+        return py.init(Self, .{
+            .actual = self.actual.dbl(),
+        });
+    }
+
+    // elligator2
+
+    pub fn from_bytes(args: struct { s: py.PyBytes }) !*Self {
+        const res = curve.fromBytes(
+            (try args.s.asSlice())[0..32].*,
+        ) catch |err| switch (err) {
+            error.InvalidEncoding => {
+                return py.ValueError.raise(utils.ERROR_ENCODING);
+            },
+        };
+        return py.init(Self, .{ .actual = res });
+    }
+
+    pub fn from_hash(args: struct { s: py.PyBytes }) !*Self {
+        if (try args.s.length() != 64) {
+            return py.ValueError.raiseComptimeFmt(
+                utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
+                .{64},
+            );
+        }
+        const res = curve.fromHash(
+            (try args.s.asSlice())[0..64].*,
+        );
+        return py.init(Self, .{ .actual = res });
+    }
+
+    pub fn mul(
+        self: *const Self,
+        args: struct { s: py.PyBytes },
+    ) !*Self {
+        if (try args.s.length() != 32) {
+            return py.ValueError.raiseComptimeFmt(
+                utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
+                .{32},
+            );
+        }
+        const s_slice = (try args.s.asSlice())[0..32].*;
+        const res = self.actual.mul(
+            s_slice,
+        ) catch |err| switch (err) {
+            error.IdentityElement => {
+                return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+            },
+            error.WeakPublicKey => {
+                return py.ArithmeticError.raise(utils.ERROR_WEAKPUBLICKEY);
+            },
+        };
+        return py.init(Self, .{ .actual = res });
+    }
+
+    pub fn mul_double_base_public(p1: *const Self, args: struct {
+        p2: *const Self,
+        s1_: py.PyBytes,
+        s2_: py.PyBytes,
+    }) !*Self {
+        if (try args.s1_.length() != 32 or try args.s2_.length() != 32) {
+            return py.ValueError.raiseComptimeFmt(
+                utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
+                .{32},
+            );
+        }
+        const s1_slice = (try args.s1_.asSlice())[0..32].*;
+        const s2_slice = (try args.s2_.asSlice())[0..32].*;
+        const res = curve.mulDoubleBasePublic(
+            p1.actual,
+            s1_slice,
+            args.p2.actual,
+            s2_slice,
+        ) catch |err| switch (err) {
+            error.IdentityElement => {
+                return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+            },
+            error.WeakPublicKey => {
+                return py.ArithmeticError.raise(utils.ERROR_WEAKPUBLICKEY);
+            },
+        };
+        return py.init(Self, .{ .actual = res });
+    }
+
+    // mulMulti
+
+    pub fn mul_public(
+        self: *const Self,
+        args: struct { s: py.PyBytes },
+    ) !*Self {
+        if (try args.s.length() != 32) {
+            return py.ValueError.raiseComptimeFmt(
+                utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
+                .{32},
+            );
+        }
+        const s_slice = (try args.s.asSlice())[0..32].*;
+        const res = self.actual.mulPublic(
+            s_slice,
+        ) catch |err| switch (err) {
+            error.IdentityElement => {
+                return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+            },
+            error.WeakPublicKey => {
+                return py.ArithmeticError.raise(utils.ERROR_WEAKPUBLICKEY);
+            },
+        };
+        return py.init(Self, .{ .actual = res });
+    }
+
+    pub fn __neg__(self: *const Self) !*Self {
+        return py.init(Self, .{ .actual = self.actual.neg() });
+    }
+
+    pub fn reject_identity(self: *const Self) !void {
+        _ = self.actual.rejectIdentity() catch |err| switch (err) {
+            error.IdentityElement => {
+                return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+            },
+        };
+    }
+
+    pub fn reject_low_order(self: *const Self) !void {
+        _ = self.actual.rejectLowOrder() catch |err| switch (err) {
+            error.WeakPublicKey => {
+                return py.ArithmeticError.raise(utils.ERROR_WEAKPUBLICKEY);
+            },
+        };
+    }
+
+    pub fn reject_non_canonical(args: struct { s: py.PyBytes }) !void {
+        if (try args.s.length() != 32) {
+            return py.ValueError.raiseComptimeFmt(
+                utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
+                .{32},
+            );
+        }
+        _ = curve.rejectNonCanonical(
+            (try args.s.asSlice())[0..32].*,
+        ) catch |err| switch (err) {
+            error.NonCanonical => {
+                return py.ArithmeticError.raise(utils.ERROR_NON_CANONICAL);
+            },
+        };
+    }
+
+    pub fn __sub__(self: *const Self, other: *const Self) !*Self {
+        return py.init(Self, .{
+            .actual = self.actual.sub(other.actual),
+        });
+    }
+
+    pub fn to_bytes(self: *const Self) !py.PyBytes {
+        return py.PyBytes.create(&self.actual.toBytes());
+    }
+});
+
 comptime {
     py.rootmodule(@This());
 }

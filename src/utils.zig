@@ -8,6 +8,7 @@ pub const ERROR_NON_CANONICAL = "One should provide canonical bytes.";
 pub const ERROR_IDENTITY_ELEMENT = "The result is the identity element.";
 pub const ERROR_ENCODING = "The provided bytes are not in Sec1 encoding.";
 pub const ERROR_NOT_SQUARE = "The provided bytes are not square.";
+pub const ERROR_WEAKPUBLICKEY = "ERROR_WEAKPUBLICKEY";
 
 pub fn string_to_endian(string: []const u8) !Endian {
     if (std.mem.eql(u8, string, "big")) {
