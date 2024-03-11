@@ -20,14 +20,28 @@ pub const Scalar = py.class(struct {
             );
         }
         const endian = try utils.give_endian_or_reject(_endian);
-        const bytes = (try _bytes.asSlice())[0..32].*;
-        const scalar = curve.scalar.Scalar.fromBytes(
-            bytes,
-            endian,
-        ) catch |err| switch (err) {
-            error.NonCanonical => {
-                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
-            },
+        const bytes = (try _bytes.asSlice())[0..len].*;
+        const f = blk: {
+            switch (len) {
+                32 => break :blk curve.scalar.Scalar.fromBytes,
+                48 => break :blk curve.scalar.Scalar.fromBytes48,
+                64 => break :blk curve.scalar.Scalar.fromBytes64,
+                else => unreachable,
+            }
+        };
+        const scalar = blk: {
+            if (len == 32) {
+                break :blk f(
+                    bytes,
+                    endian,
+                ) catch |err| switch (err) {
+                    error.NonCanonical => {
+                        return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
+                    },
+                };
+            } else {
+                break :blk f(bytes, endian);
+            }
         };
         return scalar;
     }
