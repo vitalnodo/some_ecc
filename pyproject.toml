@@ -26,3 +26,7 @@ build-backend = "poetry.core.masonry.api"
 [[tool.pydust.ext_module]]
 name = "some_ecc.secp256k1"
 root = "src/secp256k1.zig"
+
+[[tool.pydust.ext_module]]
+name = "some_ecc.ed25519"
+root = "src/ed25519.zig"
