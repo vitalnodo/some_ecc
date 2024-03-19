@@ -297,7 +297,31 @@ pub const Point = py.class(struct {
         });
     }
 
-    // fromEdwards25519
+    pub fn from_ed25519(args: struct { s: py.PyObject }) !*Self {
+        const class = try args.s.getAttribute("__class__");
+        const module_name = try class.getAs([]const u8, "__module__");
+        const class_name = try class.getAs([]const u8, "__name__");
+        if (std.mem.eql(
+            u8,
+            module_name,
+            "some_ecc.ed25519",
+        ) and std.mem.eql(
+            u8,
+            class_name,
+            "Point",
+        )) {
+            const t = py.class(struct { actual: std.crypto.ecc.Edwards25519 });
+            const res = py.unchecked(*const t, args.s);
+            const converted = curve.fromEdwards25519(res.actual) catch |err| switch (err) {
+                error.IdentityElement => {
+                    return py.ArithmeticError.raise(utils.ERROR_IDENTITY_ELEMENT);
+                },
+            };
+            return py.init(Self, .{ .actual = converted });
+        } else {
+            return py.Exception.raise(utils.ERROR_SHOULD_PROVIDE_ED25519_POINT);
+        }
+    }
 
     pub fn from_bytes(args: struct { s: py.PyBytes }) !*Self {
         const res = curve.fromBytes(
