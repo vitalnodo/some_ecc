@@ -463,6 +463,17 @@ pub const Point = py.class(struct {
     }
 });
 
+pub const BasePoint = py.class(struct {
+    const Self = @This();
+    point: Point,
+
+    pub fn __init__(self: *Self) !void {
+        self.* = .{
+            .point = .{ .actual = curve.basePoint },
+        };
+    }
+});
+
 comptime {
     py.rootmodule(@This());
 }
