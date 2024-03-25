@@ -35,33 +35,23 @@ pub const Scalar = py.class(struct {
     }
 
     pub fn from_bytes(
-        self: *Self,
-        args: struct { _bytes: py.PyBytes, _endian: py.PyString },
+        args: struct { _bytes: py.PyBytes },
     ) !*Self {
-        py.incref(self);
         const scalar = try give_scalar_or_reject_bytes(
             32,
             args._bytes,
         );
-        self.* = .{
-            .scalar = scalar,
-        };
-        return self;
+        return py.init(Self, .{ .scalar = scalar });
     }
 
     pub fn from_bytes64(
-        self: *Self,
-        args: struct { _bytes: py.PyBytes, _endian: py.PyString },
+        args: struct { _bytes: py.PyBytes },
     ) !*Self {
-        py.incref(self);
         const scalar = try give_scalar_or_reject_bytes(
             64,
             args._bytes,
         );
-        self.* = .{
-            .scalar = scalar,
-        };
-        return self;
+        return py.init(Self, .{ .scalar = scalar });
     }
 
     pub fn to_bytes(
