@@ -436,7 +436,7 @@ pub const Point = py.class(struct {
         };
     }
 
-    pub fn reject_non_canonical(args: struct { s: py.PyBytes }) !void {
+    pub fn reject_noncanonical(args: struct { s: py.PyBytes }) !void {
         if (try args.s.length() != 32) {
             return py.ValueError.raiseComptimeFmt(
                 utils.ERROR_INCORRECT_LENGTH_OF_BYTES,

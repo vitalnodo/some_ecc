@@ -361,7 +361,7 @@ pub const Point = py.class(struct {
             },
         };
     }
-    pub fn reject_non_canonical(args: struct { s: py.PyBytes }) !void {
+    pub fn reject_noncanonical(args: struct { s: py.PyBytes }) !void {
         if (try args.s.length() != 32) {
             return py.ValueError.raiseComptimeFmt(
                 utils.ERROR_INCORRECT_LENGTH_OF_BYTES,
@@ -372,7 +372,7 @@ pub const Point = py.class(struct {
             (try args.s.asSlice())[0..32].*,
         ) catch |err| switch (err) {
             error.NonCanonical => {
-                return py.ArithmeticError.raise(utils.ERROR_NON_CANONICAL);
+                return py.ValueError.raise(utils.ERROR_NON_CANONICAL);
             },
         };
     }
