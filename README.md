@@ -17,3 +17,4 @@ To format:
 poetry run black .
 ```
 
+https://github.com/ziglang/zig/pull/19245
